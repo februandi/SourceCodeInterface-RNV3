@@ -4652,6 +4652,12 @@ QScrollBar::sub-page:horizontal {
                 self.timer_ok_received = QTimer(self)
                 self.timer_ok_received.timeout.connect(self.check_ok_received)
                 self.timer_ok_received.start(100)  # Cek setiap 100ms
+                
+                # ⏱️ Set up timer untuk TIMEOUT jika tidak ada OK dalam 4 detik (4000ms)
+                self.timer_ok_timeout = QTimer(self)
+                self.timer_ok_timeout.timeout.connect(self.on_ok_timeout)
+                self.timer_ok_timeout.setSingleShot(True)  # Jalankan sekali saja
+                self.timer_ok_timeout.start(4000)  # Timeout 4 detik
 
             else:
                 self.current_line_index += 1
@@ -4666,7 +4672,20 @@ QScrollBar::sub-page:horizontal {
         if self.ok_received:
             self.current_line_index += 1  # Pindah ke baris berikutnya
             self.timer_ok_received.stop()  # Hentikan timer setelah berhasil
+            self.timer_ok_timeout.stop()  # ✅ Hentikan timeout timer jika OK diterima
             self.send_next_line()  # Kirim baris berikutnya
+    
+    def on_ok_timeout(self):
+        """ Dipanggil jika tidak ada OK diterima dalam 4 detik (TIMEOUT). """
+        self.timer_ok_received.stop()  # Hentikan timer check
+        self.timer_ok_timeout.stop()  # Hentikan timeout timer
+        
+        print(f"⚠️ TIMEOUT: Tidak ada respons 'ok' dalam 4 detik untuk baris {self.current_line_index + 1}")
+        self.update_view(f"⚠️ TIMEOUT pada baris {self.current_line_index + 1} - Lanjut ke baris berikutnya")
+        
+        # Lanjut ke baris berikutnya meskipun timeout
+        self.current_line_index += 1
+        self.send_next_line()
 
     def fungsi_pushButton_stop(self):
         self.blink_timer_move.stop()
